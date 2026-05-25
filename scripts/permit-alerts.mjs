@@ -4,7 +4,7 @@
 // been alerted yet, groups by territory/salesman, and sends Telegram messages.
 //
 // Run as a cron job (e.g. daily at 7am):
-//   0 7 * * * cd /path/to/ISTpermits/scripts && node permit-alerts.mjs
+//   0 7 * * * cd /path/to/green-country-permits/scripts && node permit-alerts.mjs
 //
 // Env vars:
 //   TELEGRAM_BOT_TOKEN  — Telegram bot token (required)

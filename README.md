@@ -1,4 +1,4 @@
-# IST Permit Intel — Tulsa Metro
+# Green Country Permits — Tulsa Metro
 
 Construction permit intelligence map for NE Oklahoma. HD satellite imagery with real November 2025 NOW Report permit data.
 
@@ -12,8 +12,8 @@ Construction permit intelligence map for NE Oklahoma. HD satellite imagery with 
 ```bash
 git init
 git add .
-git commit -m "IST Permit Intel v1"
-git remote add origin https://github.com/YOUR_USERNAME/ist-permit-intel.git
+git commit -m "Green Country Permits v1"
+git remote add origin https://github.com/johnnyaustincasper/green-country-permits.git
 git push -u origin main
 ```
 

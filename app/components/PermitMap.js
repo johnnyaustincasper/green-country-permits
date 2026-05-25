@@ -191,7 +191,7 @@ function LoginScreen({ onLogin }) {
       <div style={{ width: '100%', maxWidth: 360 }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.65)', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 4 }}>Insulation Services of Tulsa</div>
-          <div style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>IST Permits</div>
+          <div style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>Green Country Permits</div>
           <div style={{ width: 40, height: 2, background: T.blue, margin: '12px auto 0', borderRadius: 1 }} />
         </div>
 

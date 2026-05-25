@@ -1,4 +1,4 @@
-# IST Permit Intel — Scripts
+# Green Country Permits — Scripts
 
 ## Overview
 
@@ -96,7 +96,7 @@ To run hourly:
 ```bash
 crontab -e
 # Add:
-0 * * * * cd /Users/celeste/.openclaw/workspace/ISTpermits/scripts && GMAIL_APP_PASSWORD="..." NEXT_PUBLIC_MAPBOX_TOKEN="..." node gmail-poller.js >> /tmp/ist-poller.log 2>&1
+0 * * * * cd /Users/celeste/.openclaw/workspace/green-country-permits/scripts && GMAIL_APP_PASSWORD="..." NEXT_PUBLIC_MAPBOX_TOKEN="..." node gmail-poller.js >> /tmp/ist-poller.log 2>&1
 ```
 
 ---
