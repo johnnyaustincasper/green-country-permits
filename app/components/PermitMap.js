@@ -1,16 +1,50 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { CITIES, PERMITS } from '../../lib/permits';
 
 const MAP_STYLES = {
-  satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
-  streets: 'mapbox://styles/mapbox/streets-v12',
-  dark: 'mapbox://styles/mapbox/dark-v11',
+  // Public raster tiles so the permit map works even when Vercel has no Mapbox token.
+  satellite: {
+    version: 8,
+    sources: {
+      satellite: {
+        type: 'raster',
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+        tileSize: 256,
+        attribution: 'Tiles © Esri',
+      },
+    },
+    layers: [{ id: 'satellite', type: 'raster', source: 'satellite' }],
+  },
+  streets: {
+    version: 8,
+    sources: {
+      osm: {
+        type: 'raster',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        attribution: '© OpenStreetMap contributors',
+      },
+    },
+    layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+  },
+  dark: {
+    version: 8,
+    sources: {
+      carto: {
+        type: 'raster',
+        tiles: ['https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        attribution: '© OpenStreetMap contributors © CARTO',
+      },
+    },
+    layers: [{ id: 'carto-dark', type: 'raster', source: 'carto' }],
+  },
 };
 
 const PALETTE = {
@@ -140,11 +174,11 @@ function buttonStyle(color) {
 export default function PermitMap() {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
-  const [permits, setPermits] = useState(() => PERMITS.filter(p => Number(p.lat) && Number(p.lng)));
+  const [permits, setPermits] = useState(() => PERMITS);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(null);
   const [city, setCity] = useState('All');
-  const [styleKey, setStyleKey] = useState('satellite');
+  const [styleKey, setStyleKey] = useState('streets');
   const [query, setQuery] = useState('');
   const [customOnly, setCustomOnly] = useState(false);
   const [minScore, setMinScore] = useState(0);
@@ -156,7 +190,7 @@ export default function PermitMap() {
     getDocs(collection(db, 'permits'))
       .then(snapshot => {
         if (!alive) return;
-        const livePermits = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(p => Number(p.lat) && Number(p.lng));
+        const livePermits = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         if (livePermits.length) setPermits(livePermits);
       })
       .catch(error => {
@@ -184,6 +218,23 @@ export default function PermitMap() {
 
   const geoJSON = useMemo(() => buildGeoJSON(filtered), [filtered]);
 
+  const mappedCount = geoJSON.features.length;
+
+  const pinPositions = useMemo(() => {
+    const mapped = filtered.filter(p => Number(p.lat) && Number(p.lng));
+    if (!mapped.length) return [];
+    const lats = mapped.map(p => Number(p.lat));
+    const lngs = mapped.map(p => Number(p.lng));
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    return mapped.map(p => ({
+      permit: p,
+      left: 36 + ((Number(p.lng) - minLng) / Math.max(0.0001, maxLng - minLng)) * 58,
+      top: 8 + (1 - ((Number(p.lat) - minLat) / Math.max(0.0001, maxLat - minLat))) * 84,
+      score: permitScore(p),
+    }));
+  }, [filtered]);
+
   const stats = useMemo(() => {
     const totalValue = filtered.reduce((sum, p) => sum + (Number(p.value) || 0), 0);
     const custom = filtered.filter(p => !p.production).length;
@@ -192,10 +243,8 @@ export default function PermitMap() {
   }, [filtered]);
 
   useEffect(() => {
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (!token || mapRef.current || !mapContainer.current) return;
-    mapboxgl.accessToken = token;
-    const map = new mapboxgl.Map({
+    if (mapRef.current || !mapContainer.current) return;
+    const map = new maplibregl.Map({
       container: mapContainer.current,
       style: MAP_STYLES[styleKey],
       center: [-95.86, 36.11],
@@ -205,7 +254,7 @@ export default function PermitMap() {
       antialias: true,
     });
     mapRef.current = map;
-    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right');
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
 
     map.on('load', () => {
       map.addSource('permits', { type: 'geojson', data: geoJSON });
@@ -232,23 +281,6 @@ export default function PermitMap() {
           'circle-opacity': 0.94,
         },
       });
-      map.addLayer({
-        id: 'permit-labels',
-        type: 'symbol',
-        source: 'permits',
-        minzoom: 11.2,
-        layout: {
-          'text-field': ['get', 'label'],
-          'text-size': 11,
-          'text-offset': [0, 1.2],
-          'text-anchor': 'top',
-        },
-        paint: {
-          'text-color': '#f4fff8',
-          'text-halo-color': '#06130f',
-          'text-halo-width': 1.6,
-        },
-      });
       map.on('mouseenter', 'permit-points', () => { map.getCanvas().style.cursor = 'pointer'; });
       map.on('mouseleave', 'permit-points', () => { map.getCanvas().style.cursor = ''; });
       map.on('click', 'permit-points', e => {
@@ -257,6 +289,12 @@ export default function PermitMap() {
         setSelected(props);
         map.easeTo({ center: e.features[0].geometry.coordinates, zoom: Math.max(map.getZoom(), 12), duration: 500 });
       });
+
+      const coords = geoJSON.features.map(f => f.geometry.coordinates);
+      if (coords.length) {
+        const bounds = coords.reduce((b, coord) => b.extend(coord), new maplibregl.LngLatBounds(coords[0], coords[0]));
+        map.fitBounds(bounds, { padding: { top: 70, bottom: 70, left: 470, right: 70 }, maxZoom: 10.6, duration: 0 });
+      }
     });
 
     return () => {
@@ -293,14 +331,20 @@ export default function PermitMap() {
   const fitFiltered = () => {
     const coords = geoJSON.features.map(f => f.geometry.coordinates);
     if (!coords.length || !mapRef.current) return;
-    const bounds = coords.reduce((b, coord) => b.extend(coord), new mapboxgl.LngLatBounds(coords[0], coords[0]));
+    const bounds = coords.reduce((b, coord) => b.extend(coord), new maplibregl.LngLatBounds(coords[0], coords[0]));
     mapRef.current.fitBounds(bounds, { padding: 80, maxZoom: 13, duration: 700 });
   };
 
   return (
     <main style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: PALETTE.bg, color: PALETTE.text, fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", sans-serif' }}>
-      <div ref={mapContainer} style={{ position: 'absolute', inset: 0 }} />
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(circle at 12% 10%, rgba(41,209,125,0.20), transparent 28%), linear-gradient(90deg, rgba(6,19,15,0.88) 0%, rgba(6,19,15,0.48) 34%, rgba(6,19,15,0.05) 70%)' }} />
+      <div ref={mapContainer} style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', opacity: styleKey === 'satellite' ? 0.16 : 0.24, backgroundColor: styleKey === 'dark' ? '#06130f' : '#10251f', backgroundImage: 'linear-gradient(32deg, transparent 0 47%, rgba(255,255,255,0.20) 48% 50%, transparent 51% 100%), linear-gradient(118deg, transparent 0 46%, rgba(255,255,255,0.12) 47% 49%, transparent 50% 100%), linear-gradient(rgba(255,255,255,0.10) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.10) 1px, transparent 1px)', backgroundSize: '520px 520px, 430px 430px, 84px 84px, 84px 84px' }} />
+      <div aria-label="Permit pin overlay" style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none' }}>
+        {pinPositions.map(({ permit, left, top, score }) => (
+          <button key={`pin-${permit.id}`} title={`${permit.builder || permit.owner || 'Permit'} — ${permit.address || ''}`} onClick={() => setSelected(permit)} style={{ position: 'absolute', left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)', width: score >= 75 ? 16 : 12, height: score >= 75 ? 16 : 12, borderRadius: 999, border: '2px solid #fff', background: scoreColor(score), boxShadow: `0 0 0 6px ${scoreColor(score)}33, 0 0 22px ${scoreColor(score)}`, padding: 0, pointerEvents: 'auto', cursor: 'pointer' }} />
+        ))}
+      </div>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none', background: 'radial-gradient(circle at 12% 10%, rgba(41,209,125,0.12), transparent 24%), linear-gradient(90deg, rgba(6,19,15,0.78) 0%, rgba(6,19,15,0.28) 31%, rgba(6,19,15,0.00) 62%)' }} />
 
       <section style={{ position: 'absolute', top: 18, left: 18, bottom: 18, width: 'min(430px, calc(100vw - 36px))', zIndex: 4, display: 'flex', flexDirection: 'column', gap: 14, pointerEvents: 'auto' }}>
         <div style={{ border: `1px solid ${PALETTE.borderStrong}`, background: PALETTE.panel, borderRadius: 30, padding: 22, boxShadow: '0 24px 70px rgba(0,0,0,0.35)', backdropFilter: 'blur(18px)' }}>
@@ -311,8 +355,8 @@ export default function PermitMap() {
           <p style={{ margin: 0, color: PALETTE.muted, lineHeight: 1.45, fontSize: 14 }}>A clean permit discovery dashboard for northeast Oklahoma — built around projects, locations, values, and timing.</p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 18 }}>
-            <Stat label="Permits" value={filtered.length} />
-            <Stat label="Custom" value={stats.custom} accent={PALETTE.blue} />
+            <Stat label="Total permits" value={filtered.length} />
+            <Stat label="Mapped pins" value={mappedCount} accent={PALETTE.blue} />
             <Stat label="High Pulse" value={stats.highPulse} accent={PALETTE.gold} />
           </div>
           <div style={{ marginTop: 10 }}>
@@ -329,8 +373,8 @@ export default function PermitMap() {
               {CITIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <select value={styleKey} onChange={e => setStyleKey(e.target.value)} style={selectStyle()}>
-              <option value="satellite">Satellite</option>
               <option value="streets">Streets</option>
+              <option value="satellite">Satellite</option>
               <option value="dark">Dark</option>
             </select>
           </div>
@@ -341,8 +385,29 @@ export default function PermitMap() {
             <button onClick={fitFiltered} style={chipStyle(false)}>Fit map</button>
           </div>
 
-          {months.length > 0 && <div style={{ color: PALETTE.faint, fontSize: 12 }}>Months in data: {months.join(', ')}</div>}
+          {months.length > 0 && <div style={{ color: PALETTE.faint, fontSize: 12 }}>Months in data: {months.join(', ')} · {mappedCount} mapped / {filtered.length} total permits</div>}
           {loading && <div style={{ color: PALETTE.green2, fontSize: 13, fontWeight: 800 }}>Loading permits…</div>}
+        </div>
+
+        <div style={{ border: `1px solid ${PALETTE.border}`, background: PALETTE.panel, borderRadius: 26, padding: 12, backdropFilter: 'blur(18px)', overflow: 'auto', minHeight: 0, flex: 1 }}>
+          <div style={{ color: PALETTE.faint, fontSize: 11, fontWeight: 900, letterSpacing: 1.2, textTransform: 'uppercase', margin: '2px 4px 10px' }}>
+            Permit list · {filtered.length} total
+          </div>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {filtered.slice(0, 140).map(permit => {
+              const isMapped = Number(permit.lat) && Number(permit.lng);
+              return (
+                <button key={permit.id} onClick={() => { if (isMapped) { setSelected(permit); mapRef.current?.easeTo({ center: [Number(permit.lng), Number(permit.lat)], zoom: 12, duration: 500 }); } }} style={{ textAlign: 'left', border: `1px solid ${isMapped ? PALETTE.borderStrong : PALETTE.border}`, background: isMapped ? 'rgba(41,209,125,0.10)' : 'rgba(255,255,255,0.05)', color: PALETTE.text, borderRadius: 16, padding: '10px 11px', cursor: isMapped ? 'pointer' : 'default', font: 'inherit' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                    <strong style={{ fontSize: 13 }}>{permit.builder || permit.owner || 'Unknown permit holder'}</strong>
+                    <span style={{ color: isMapped ? PALETTE.green2 : PALETTE.faint, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{isMapped ? 'Mapped' : 'Needs geocode'}</span>
+                  </div>
+                  <div style={{ marginTop: 3, color: PALETTE.muted, fontSize: 12 }}>{permit.address}{permit.city ? ` · ${permit.city}` : ''}</div>
+                  <div style={{ marginTop: 3, color: PALETTE.faint, fontSize: 11 }}>{money(permit.value)} · {permit.week || 'No week'}</div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
