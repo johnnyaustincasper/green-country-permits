@@ -5,7 +5,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { CITIES } from '../../lib/permits';
+import { CITIES, PERMITS } from '../../lib/permits';
 
 const MAP_STYLES = {
   satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
@@ -140,8 +140,8 @@ function buttonStyle(color) {
 export default function PermitMap() {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
-  const [permits, setPermits] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [permits, setPermits] = useState(() => PERMITS.filter(p => Number(p.lat) && Number(p.lng)));
+  const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(null);
   const [city, setCity] = useState('All');
   const [styleKey, setStyleKey] = useState('satellite');
@@ -150,14 +150,17 @@ export default function PermitMap() {
   const [minScore, setMinScore] = useState(0);
 
   useEffect(() => {
+    if (!db) return;
     let alive = true;
+    setLoading(true);
     getDocs(collection(db, 'permits'))
       .then(snapshot => {
         if (!alive) return;
-        setPermits(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const livePermits = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(p => Number(p.lat) && Number(p.lng));
+        if (livePermits.length) setPermits(livePermits);
       })
       .catch(error => {
-        console.error('Failed to load permits:', error);
+        console.warn('Using bundled permit sample because live permit data is unavailable:', error);
       })
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
@@ -344,7 +347,7 @@ export default function PermitMap() {
       </section>
 
       <div style={{ position: 'absolute', right: 18, top: 18, zIndex: 4, border: `1px solid ${PALETTE.border}`, background: PALETTE.panel, color: PALETTE.muted, borderRadius: 999, padding: '10px 14px', fontSize: 12, fontWeight: 800, backdropFilter: 'blur(18px)' }}>
-        No sign-in · No sales team · Permit data only
+        Public permit dashboard · Permit data only
       </div>
 
       <PermitCard permit={selected} onClose={() => setSelected(null)} />

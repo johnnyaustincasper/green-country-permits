@@ -125,9 +125,9 @@ async function getAdminDb() {
         const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
         admin.initializeApp({ credential: admin.credential.cert(sa) });
       } else {
-        // Use application default credentials (works on GCP/Vercel with Firebase)
+        // Use an explicitly configured Firebase project when server-side sync is enabled.
         admin.initializeApp({
-          projectId: 'green-country-permits',
+          projectId: process.env.FIREBASE_PROJECT_ID,
         });
       }
     }

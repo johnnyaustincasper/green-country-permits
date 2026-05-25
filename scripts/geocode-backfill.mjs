@@ -13,8 +13,8 @@ if (!TOKEN) { console.error('Set NEXT_PUBLIC_MAPBOX_TOKEN'); process.exit(1); }
 
 const app = getApps().length ? getApps()[0] : initializeApp({
   apiKey: "AIzaSyBvL6M_2kPGt8XrcgpPHfL-bwU9BAH57Qk",
-  projectId: "insulation-services-da91a",
-  storageBucket: "insulation-services-da91a.firebasestorage.app",
+  projectId: process.env.FIREBASE_PROJECT_ID || "green-country-permits",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
   messagingSenderId: "761459419108",
   appId: "1:761459419108:web:25235ad8b067eddb96c9f1",
 });

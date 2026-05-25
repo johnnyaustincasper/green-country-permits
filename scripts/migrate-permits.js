@@ -17,7 +17,7 @@ import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SERVICE_ACCOUNT_PATH = '/Users/celeste/.openclaw/workspace/.secrets/firebase-service-account.json';
-const PROJECT_ID = 'insulation-services-da91a';
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'green-country-permits';
 
 // Load permits from the parent lib/permits.js (ESM)
 const permitsPath = path.resolve(__dirname, '../lib/permits.js');
@@ -75,9 +75,9 @@ if (existsSync(SERVICE_ACCOUNT_PATH)) {
 
   const app = initializeApp({
     apiKey: "AIzaSyBvL6M_2kPGt8XrcgpPHfL-bwU9BAH57Qk",
-    authDomain: "insulation-services-da91a.firebaseapp.com",
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
     projectId: PROJECT_ID,
-    storageBucket: "insulation-services-da91a.firebasestorage.app",
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
     messagingSenderId: "761459419108",
     appId: "1:761459419108:web:25235ad8b067eddb96c9f1",
   });
