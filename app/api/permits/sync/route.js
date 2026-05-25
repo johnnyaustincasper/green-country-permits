@@ -15,7 +15,7 @@ const PERMIT_DATASET_IDS = [
   'building-permits',
 ];
 
-// Construction permit types surfaced by the dashboard
+// Insulation-relevant permit types
 const RELEVANT_TYPES = [
   'NEW CONSTRUCTION',
   'NEW SINGLE FAMILY',
@@ -30,7 +30,7 @@ const RELEVANT_TYPES = [
   'FRAMING',
 ];
 
-function isDashboardRelevant(permitType) {
+function isInsulationRelevant(permitType) {
   if (!permitType) return false;
   const upper = permitType.toUpperCase();
   return RELEVANT_TYPES.some(t => upper.includes(t));
@@ -125,9 +125,9 @@ async function getAdminDb() {
         const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
         admin.initializeApp({ credential: admin.credential.cert(sa) });
       } else {
-        // Use an explicitly configured Firebase project when server-side sync is enabled.
+        // Use application default credentials (works on GCP/Vercel with Firebase)
         admin.initializeApp({
-          projectId: process.env.FIREBASE_PROJECT_ID,
+          projectId: 'insulation-services-da91a',
         });
       }
     }
@@ -164,12 +164,12 @@ export async function POST(req) {
 
   fetched = rawPermits.length;
 
-  // Filter for dashboard-relevant permits
+  // Filter for insulation-relevant permits
   const relevantPermits = rawPermits.filter(p =>
-    isDashboardRelevant(p.permit_type || p.work_description || p.type || p.description || '')
+    isInsulationRelevant(p.permit_type || p.work_description || p.type || p.description || '')
   );
 
-  console.log(`${relevantPermits.length} dashboard-relevant permits out of ${fetched}`);
+  console.log(`${relevantPermits.length} insulation-relevant permits out of ${fetched}`);
 
   // Sync to Firestore if we have data
   if (relevantPermits.length > 0) {

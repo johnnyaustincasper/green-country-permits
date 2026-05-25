@@ -1,4 +1,4 @@
-# Green Country Permits — Scripts
+# IST Permit Intel — Scripts
 
 ## Overview
 
@@ -44,7 +44,7 @@ Gmail does **not** allow IMAP access with your regular password. You need an **A
 2. Enable **2-Step Verification** (required)
 3. Go to [https://myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
 4. Create a new App Password:
-   - App: **Mail** (or Other → name it "Green Country Permits Poller")
+   - App: **Mail** (or Other → name it "IST Poller")
 5. Copy the 16-character code (e.g. `abcd efgh ijkl mnop`)
 
 Set it as an environment variable:
@@ -96,7 +96,7 @@ To run hourly:
 ```bash
 crontab -e
 # Add:
-0 * * * * cd /Users/celeste/.openclaw/workspace/green-country-permits/scripts && GMAIL_APP_PASSWORD="..." NEXT_PUBLIC_MAPBOX_TOKEN="..." node gmail-poller.js >> /tmp/green-country-permits-poller.log 2>&1
+0 * * * * cd /Users/celeste/.openclaw/workspace/ISTpermits/scripts && GMAIL_APP_PASSWORD="..." NEXT_PUBLIC_MAPBOX_TOKEN="..." node gmail-poller.js >> /tmp/ist-poller.log 2>&1
 ```
 
 ---
