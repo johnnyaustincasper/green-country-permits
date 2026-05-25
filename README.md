@@ -54,9 +54,9 @@ Edit `lib/permits.js` and add entries to the `PERMITS` array. Each permit needs:
 }
 ```
 
-## Celeste Auto-Upload (Future)
-The next step is connecting to Firebase so Celeste can auto-push new permits weekly. The pipeline:
-1. NOW PDF arrives → Celeste parses HOUSE-NEW entries
+## Automated Permit Upload (Future)
+The next step is connecting to Firebase so the importer can push new permits weekly. The pipeline:
+1. NOW PDF arrives → the importer parses HOUSE-NEW entries
 2. Geocodes addresses via Google Maps API
 3. Pushes to Firestore `permits` collection
 4. This app reads from Firestore instead of the static file

@@ -10,7 +10,7 @@
  *   1. Go to https://myaccount.google.com/security
  *   2. Enable 2-Step Verification if not already enabled
  *   3. Go to https://myaccount.google.com/apppasswords
- *   4. Create an App Password for "Mail" / "Other (Custom name)" → name it "IST Poller"
+ *   4. Create an App Password for "Mail" / "Other (Custom name)" → name it "Green Country Permits Poller"
  *   5. Replace GMAIL_PASSWORD below (or set GMAIL_APP_PASSWORD env var) with the 16-char code
  *
  * Run: node gmail-poller.js
@@ -28,7 +28,7 @@ import crypto from 'crypto';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GEOCODE_CACHE_PATH = path.join(__dirname, 'geocode-cache.json');
 const SERVICE_ACCOUNT_PATH = '/Users/celeste/.openclaw/workspace/.secrets/firebase-service-account.json';
-const PROJECT_ID = 'insulation-services-da91a';
+const PROJECT_ID = 'green-country-permits';
 
 // ── Config ─────────────────────────────────────────────────────────────────
 const GMAIL_USER = 'Ivebeencelested@gmail.com';
@@ -299,7 +299,7 @@ async function getFirestore() {
     const app = getApps().length ? getApps()[0] : initializeApp({
       apiKey: "AIzaSyBvL6M_2kPGt8XrcgpPHfL-bwU9BAH57Qk",
       projectId: PROJECT_ID,
-      storageBucket: "insulation-services-da91a.firebasestorage.app",
+      storageBucket: "green-country-permits.firebasestorage.app",
       messagingSenderId: "761459419108",
       appId: "1:761459419108:web:25235ad8b067eddb96c9f1",
     });
@@ -382,7 +382,7 @@ function fetchUnreadEmails() {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log('═══ IST Gmail Poller ═══\n');
+  console.log('═══ Green Country Permits Poller ═══\n');
 
   let emailsChecked = 0;
   let pdfsFound = 0;
